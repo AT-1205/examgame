@@ -6,9 +6,10 @@ pygame.init()
 
 screen_x = 552
 screen_y = 516
+
 win = pygame.display.set_mode((screen_x, screen_y))
 
-pygame.display.set_caption('Test game')
+pygame.display.set_caption('Minion run!')
 
 
 icon = pygame.image.load('sunny.png')
@@ -25,12 +26,12 @@ jump_over = False
 
 
 class Something:
-    def __init__(self, x, y, weight, speed1, pic):
+    def __init__(self, x, y, w, speed1, pic):
         self.x = x
         self.y = y
         self.speed = speed1
         self.pic = pic
-        self.weight = weight
+        self.w = w
 
     def move(self):
         if self.x >= -screen_x:
@@ -40,13 +41,44 @@ class Something:
         else:
             return False
 
-    def return1(self, dis, y, weight, pic):
+    def return1(self, dis, y, w, pic):
         self.x = dis
         self.y = y
-        self.weight = weight
+        self.w = w
         self.pic = pic
         win.blit(self.pic, (self.x, self.y))
 
+
+class Button:
+    def __init__(self, w, h):
+        self.w = w
+        self.h = h
+
+    def set(self, x, y, message, act=None):
+        m = pygame.mouse.get_pos()
+        press = pygame.mouse.get_pressed(3)
+
+        if x < m[0] < x + self.w:
+            if y < m[1] < y + self.h:
+                pygame.draw.rect(win, (251, 213, 39), (x, y, self.w, self.h))
+
+                if press[0] == 1 and act is not None:
+                    pygame.mixer.Sound.play(press_s)
+                    pygame.time.delay(300)
+                    if act is not None:
+                        if act == quit:
+                            pygame.quit()
+                            quit()
+                        else:
+                            act()
+
+        else:
+            pygame.draw.rect(win, (255, 151, 17), (x, y, self.w, self.h))
+
+        text1(message, x + 10, y + 10)
+
+
+button = Button(70, 48)
 
 player = pygame.image.load('minion.png')
 player_x = 240
@@ -55,9 +87,11 @@ player_y = 370
 block1 = pygame.image.load('brickwall.png')
 block2 = pygame.image.load('bush.png')
 block3 = pygame.image.load('fence.png')
-blocklist = [block1, block2, block3]
+block4 = pygame.image.load('recycle-bin.png')
+block5 = pygame.image.load('landslide.png')
+blocklist = [block1, block2, block3, block4, block5]
 
-block_size = [64, 370, 63, 395, 64, 370]
+block_size = [64, 370, 63, 395, 64, 370, 64, 370, 64, 370]
 
 clouds = [pygame.image.load('clouds.png'), pygame.image.load('cloud-computing.png'), pygame.image.load('aeroplane.png')]
 
@@ -67,8 +101,72 @@ makejump = False
 jumpcount = 30
 
 banana = pygame.image.load('banana.png')
-life = 6
+life = 3
 speed = 4
+
+minions = pygame.image.load('minions.jpg')
+
+
+def menu():
+
+    s = True
+
+    button1 = Button(130, 70)
+    button2 = Button(130, 70)
+    button3 = Button(130, 70)
+
+    while s:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.mixer.Sound.play(press_s)
+                pygame.quit()
+                quit()
+
+        win.blit(minions, (0, 0))
+        button1.set(210, 200, '       Start', start)
+        button2.set(210, 280, '        Quit', quit)
+        button3.set(210, 370, '     Records', sc)
+
+        pygame.display.update()
+        clock.tick(100)
+
+
+def sc():
+
+    j = open("Game progress.txt", 'r')
+    lines = j.readlines()
+    r = True
+    button4 = Button(70, 40)
+
+    while r:
+
+        win.fill((255, 224, 17))
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                quit()
+
+        x = 100
+        y = 100
+        for i in lines:
+            text1(i, x, y)
+            y += 30
+
+        button4.set(20, 30, 'Back', menu)
+        pygame.display.update()
+
+
+def start():
+
+    global life, score, makejump, player_y, jumpcount
+
+    while game():
+        score = 0
+        player_y = 370
+        life = 3
+        makejump = False
+        jumpcount = 30
 
 
 def play(x, y):
@@ -76,6 +174,8 @@ def play(x, y):
 
 
 def game():
+
+    pygame.mixer.music.play(-1)
 
     global makejump, player_x, life, speed
 
@@ -87,7 +187,6 @@ def game():
     cloud = random_cloud()
 
     while run:
-        pygame.mixer.music.play(-1)
         win.blit(background, (0, 0))
 
         for event in pygame.event.get():
@@ -105,7 +204,9 @@ def game():
 
         if makejump:
             jump()
+
         bananas()
+
         if check_play(block_arr) is True:
             if eatbanana() is False:
                 run = False
@@ -118,8 +219,11 @@ def game():
         move_cloud(cloud)
         speed += 1
 
+        button.set(20, 100, 'Menu', menu)
+
         pygame.display.update()
         clock.tick(30)
+
     return game_over()
 
 
@@ -136,27 +240,39 @@ def jump():
 def create_block(array):
     global speed
 
-    choice = random.randrange(0, 3)
+    choice = random.randrange(0, 5)
     pic = blocklist[choice]
-    weight = block_size[choice * 2]
+    w = block_size[choice * 2]
     height = block_size[choice * 2 + 1]
-    array.append(Something(screen_x, height, weight, speed, pic))
+    array.append(Something(screen_x, height, w, speed, pic))
 
-    choice = random.randrange(0, 3)
+    choice = random.randrange(0, 5)
     pic = blocklist[choice]
-    weight = block_size[choice * 2]
+    w = block_size[choice * 2]
     height = block_size[choice * 2 + 1]
-    array.append(Something(screen_x + 300, height, weight, speed, pic))
+    array.append(Something(screen_x + 300, height, w, speed, pic))
 
-    choice = random.randrange(0, 3)
+    choice = random.randrange(0, 5)
     pic = blocklist[choice]
-    weight = block_size[choice * 2]
+    w = block_size[choice * 2]
     height = block_size[choice * 2 + 1]
-    array.append(Something(screen_x + 700, height, weight, speed, pic))
+    array.append(Something(screen_x + 700, height, w, speed, pic))
+
+    choice = random.randrange(0, 5)
+    pic = blocklist[choice]
+    w = block_size[choice * 2]
+    height = block_size[choice * 2 + 1]
+    array.append(Something(screen_x + 980, height, w, speed, pic))
+
+    choice = random.randrange(0, 5)
+    pic = blocklist[choice]
+    w = block_size[choice * 2]
+    height = block_size[choice * 2 + 1]
+    array.append(Something(screen_x + 1290, height, w, speed, pic))
 
 
 def find_dis(array):
-    maxm = max(array[0].x, array[1].x, array[2].x)
+    maxm = max(array[0].x, array[1].x, array[2].x, array[3].x, array[4].x)
     if maxm < screen_x:
         dis = screen_x
         if dis - maxm < 70:
@@ -164,11 +280,7 @@ def find_dis(array):
     else:
         dis = maxm
 
-    choice = random.randrange(0, 7)
-    if choice == 0:
-        dis += random.randrange(40, 84)
-    else:
-        dis += random.randrange(300, 370)
+    dis += random.randrange(249, 400)
 
     return dis
 
@@ -181,10 +293,10 @@ def draw_block(array):
 
             choice = random.randrange(0, 3)
             pic = blocklist[choice]
-            weight = block_size[choice * 2]
+            w = block_size[choice * 2]
             height = block_size[choice * 2 + 1]
 
-            something.return1(dis, height, weight, pic)
+            something.return1(dis, height, w, pic)
 
 
 def random_cloud():
@@ -198,7 +310,7 @@ def random_cloud():
 def move_cloud(cloud):
     x = cloud.move()
     if x is False:
-        choice = random.randrange(0, 2)
+        choice = random.randrange(0, 3)
         piccloud = clouds[choice]
         cloud.return1(screen_x, 200 - random.randrange(20,  170), 20, piccloud)
 
@@ -236,17 +348,35 @@ def pause():
 
 
 def check_play(blocks):
+    global player_x
     for block in blocks:
-        if player_y + 64 >= block.y:
-            if block.x <= player_x + 49 <= block.weight + block.x:
-                return True
-            elif block.x <= 64 + player_x <= block.weight + 64:
-                return True
-    return False
+        if makejump is False:
+            if block.x + 20 <= player_x + 13 <= block.x + block.w:
+                if eatbanana() is True:
+                    dis = find_dis(blocks)
+
+                    choice = random.randrange(0, 5)
+                    pic = blocklist[choice]
+                    w = block_size[choice * 2]
+                    height = block_size[choice * 2 + 1]
+
+                    block.return1(dis, height, w, pic)
+                else:
+                    return True
+
+        elif jumpcount >= 0:
+            if player_y + 30 >= block.y:
+                if block.x <= player_x + 27 <= block.x + 49:
+                    return True
+            else:
+                if player_y + 53 >= block.y:
+                    if block.x <= player_x <= block.x + 70:
+                        return True
 
 
 def game_over():
     global score, max_score
+
     if score > max_score:
         max_score = score
     over = True
@@ -257,13 +387,12 @@ def game_over():
                 pygame.quit()
                 quit()
 
-        text1('Game Over! Press enter to play again. Escape to exit.', 80, screen_y / 2)
-        text1('Your maximum score is: ' + str(max_score), 100, screen_y / 2 + 49)
+        text1('Game Over! Press enter for menu. Escape to exit.', 40, screen_y / 2)
+        text1('Your maximum score is: ' + str(max_score), 70, screen_y / 2 + 49)
         keys = pygame.key.get_pressed()
         if keys[pygame.K_RETURN]:
             pygame.mixer.Sound.play(press_s)
-            score = 0
-            game()
+            menu()
 
         if keys[pygame.K_ESCAPE]:
             pygame.mixer.Sound.play(press_s)
@@ -271,6 +400,9 @@ def game_over():
 
         pygame.display.update()
         clock.tick(70)
+    f = open('Game progress.txt', 'a')
+    f.write(str(date.today()) + ' score:' + str(max_score) + '\n')
+    f.close()
 
 
 def bananas():
@@ -287,9 +419,9 @@ def eatbanana():
     global life, player_x
     life -= 1
     if life == 0:
-        return False
+        game_over()
     else:
-        player_x += 30
+        player_x += 7
         return True
 
 
@@ -297,7 +429,7 @@ def scores(blocks):
     global score, jump_over
     if jump_over is False:
         for block in blocks:
-            if block.x <= player_x + 32 <= block.x + block.weight:
+            if block.x <= player_x + 32 <= block.x + block.w:
                 if player_y + 60 <= block.y:
                     jump_over = True
                     break
@@ -307,10 +439,6 @@ def scores(blocks):
             jump_over = False
 
 
-while game():
-    score = 0
-    player_y = 370
+menu()
 
-f = open('Game progress.txt', 'a')
-f.write(str(date.today()) + ' score:' + str(max_score) + '\n')
 quit()
